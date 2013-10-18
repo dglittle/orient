@@ -90,7 +90,7 @@ _.run(function () {
 
     rpc.grabTasks = function (arg, req) {
         return _.p(db.collection('tasks').find({
-           _id : { $gt : _.randomString(10) }
+           _id : { $gt : _.md5(_.randomString(10)) }
         }).limit(arg.n, _.p()))
     }
 
