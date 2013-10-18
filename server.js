@@ -55,17 +55,23 @@ _.run(function () {
     })
 
     var rpc = {}
-    app.all(/\/rpc\/([^\/]+)\/([^\/]+)/, function (req, res, next) {
+    app.all(/\/rpc(\/([^\/]+)\/([^\/]+))?/, function (req, res, next) {
         _.run(function () {
             try {
-                if (g_rpc_version != req.params[0])
-                    throw new Error('version mismatch')
-                if (!req.cookies.rpc_token || req.cookies.rpc_token != req.params[1])
-                    throw new Error('token mismatch')
-                var input = _.unJson(req.method.match(/post/i) ? req.body : _.unescapeUrl(req.url.match(/\?(.*)/)[1]))
-                function runFunc(input) {
-                    return rpc[input.func](input.arg, req, res)
+                if (req.params[0]) {
+                    if (g_rpc_version != req.params[0])
+                        throw new Error('version mismatch')
+                    if (!req.cookies.rpc_token || req.cookies.rpc_token != req.params[1])
+                        throw new Error('token mismatch')
+                    var runFunc = function (input) {
+                        return rpc[input.func](input.arg, req, res)
+                    }
+                } else {
+                    var runFunc = function (input) {
+                        return rpc[input.func](input.arg)
+                    }
                 }
+                var input = _.unJson(req.method.match(/post/i) ? req.body : _.unescapeUrl(req.url.match(/\?(.*)/)[1]))
                 if (input instanceof Array)
                     var output = _.map(input, runFunc)
                 else
@@ -99,6 +105,14 @@ _.run(function () {
                 })
             }
         }, req.user, arg)
+    }
+
+    rpc.addTasks = function (arg) {
+        if (!(arg instanceof Array)) arg = [arg]
+        _.each(arg, function (task) {
+            task._id = _.md5(task.img.small + ':' + task.img.large)
+        })
+        _.p(db.collection('tasks').insert(arg, _.p()))
     }
 
     app.use(express.errorHandler({
