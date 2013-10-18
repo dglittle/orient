@@ -53,10 +53,12 @@ function mturkSubmit() {
 function mturkCheckPreview() {
     var params = _.getUrlParams()
     if (params.assignmentId == "ASSIGNMENT_ID_NOT_AVAILABLE") {
-        _.dialog($('<div style="background-color: rgba(0,0,0,0.5);color:white;font-size:xx-large;padding:10px"/>').text('preview'), false)
-        $('body').click(function () {
+        var win = $(window)
+        var w = win.width()
+        var h = win.height()
+        $('body').append($('<div style="position:fixed;left:0px;top:0px; z-index:10000;background:black;opacity:0.5;color:white;font-size:xx-large;padding:10px"/>').width(w).height(h).text('preview').click(function () {
             alert('This is a preview. Please accept the HIT to work on it.')
-        })
+        }))
         return true
     }
 }
@@ -134,7 +136,7 @@ function rotate(me, amount) {
 }
 
 $.fn.rotate = function (amount) {
-    rotate(this, amount)
+    return rotate(this, amount)
 }
 
 ///

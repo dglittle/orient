@@ -1,27 +1,14 @@
 
-function defaultEnv(key, val) {
-    if (!process.env[key])
-        process.env[key] = val
-}
-defaultEnv("PORT", 5000)
-defaultEnv("HOST", "http://localhost:" + process.env.PORT)
-defaultEnv("NODE_ENV", "production")
-defaultEnv("MONGOHQ_URL", "mongodb://localhost:27017/orient")
-defaultEnv("SESSION_SECRET", "super_secret")
-
-///
-
-process.on('uncaughtException', function (err) {
-    try {
-		console.log(err)
-        console.log(err.stack)
-	} catch (e) {}
-})
-
-///
-
 var _ = require('gl519')
+require('./nodeutils.js')
+
 _.run(function () {
+
+    defaultEnv("PORT", 5000)
+    defaultEnv("HOST", "http://localhost:" + process.env.PORT)
+    defaultEnv("NODE_ENV", "production")
+    defaultEnv("MONGOHQ_URL", "mongodb://localhost:27017/orient")
+    defaultEnv("SESSION_SECRET", "super_secret")
 
     var db = require('mongojs').connect(process.env.MONGOHQ_URL)
 
@@ -95,8 +82,23 @@ _.run(function () {
         })
     })
 
-    rpc.hello = function (arg, req) {
-        return "hello"
+    rpc.grabTasks = function (arg, req) {
+        return _.p(db.collection('tasks').find({
+           _id : { $gt : _.randomString(10) }
+        }).limit(arg.n, _.p()))
+    }
+
+    rpc.submitResults = function (arg, req) {
+        return dbEval(db, function (user, answers) {
+            for (var i = 0; i < answers.length; i++) {
+                var a = answers[i]
+                db.answers.insert({
+                    user : user,
+                    task : a.task,
+                    answer : a.answer
+                })
+            }
+        }, req.user, arg)
     }
 
     app.use(express.errorHandler({

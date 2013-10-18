@@ -5,7 +5,7 @@
 <style>
 
 body {
-    margin: 10px;
+    margin: 0px;
 }
 table {
     border-collapse: collapse;
@@ -28,90 +28,93 @@ th, td {
 
 <script>
 
-var model = []
+function updateEverything() {
+	var d = $('<div/>')
 
-function createTestModel() {
-	var m = []
-	for (var i = 0; i < 8; i++) {
-		m.push({
-			src : 'http://s3.amazonaws.com/fzaapnkuul/' + i + '-small.png',
-			angle : 0,
-			anim : {
-				img : null,
-				startAngle : 0,
-				startTime : 0,
-				endTime : 1,
-				currentAngle : 0
-			}
-		})
-	}
-	return m
-}
-model = createTestModel()
-
-function drawModel(m) {
-    var d = $('<div/>')
-
-    var updateAnimTimeout = null
-    function updateAnim() {
-    	var keepGoing = false
-    	var now = _.time()
-    	_.each(m, function (m) {
-    		var startAngle = m.anim.startAngle
-    		var endAngle = m.angle
-    		if (endAngle > startAngle && (endAngle - startAngle) > 180)
-    			endAngle -= 360
-    		else if (endAngle < startAngle && (startAngle - endAngle) > 180)
-    			endAngle += 360
-
-    		m.anim.currentAngle = myMod(Math.round(lerpCap(m.anim.startTime, startAngle, m.anim.endTime, endAngle, now)), 360)
-    		m.anim.img.rotate(m.anim.currentAngle)
-    		if (now < m.anim.endTime) keepGoing = true
-    	})
-    	clearTimeout(updateAnimTimeout)
-    	if (keepGoing)
-    		updateAnimTimeout = setTimeout(updateAnim, 30)
-    }
-
-	var size = 200
-	_.each(m, function (m) {
-		var dd = $('<div style="float:left;margin:10px"/>')
-		dd.append(center(m.anim.img = $('<img style="max-width:' + size + 'px;max-height:' + size + 'px"/>').attr('src', m.src)).myCss('width:' + size + 'px;height:' + size + 'px').click(function (e) {
-			var a = vectorSub(vectorSub(getMousePos(e), vector($(this).offset())), vector(size / 2, size / 2))
-			a.y *= -1
-			a = Math.atan2(a.y, a.x) / tau
-			a -= .25
-			a = myMod(Math.round(a * 4), 4) * 90
-
-			m.angle = myMod(m.angle + a, 360)
-			m.anim.startAngle = m.anim.currentAngle
-			m.anim.startTime = _.time()
-			m.anim.endTime = _.time() + 300
-
-			updateAnim()
-		}))
-		var buttons = $('<div style="position:relative;left:-1000px"/>')
-		buttons.append($('<button/>').text('zoom').click(function () {
-			alert('hello')
-		}))
-		dd.append(buttons)
-		dd.hover(function () {
-			dd.myCss('background:lightgrey')
-			buttons.myCss('left:0px')
-		}, function () {
-			dd.myCss('background:white')
-			buttons.myCss('left:-1000px')
-		})
-		d.append(dd)
+	if (_.closeDialog) _.closeDialog()
+	_.each(model, function (m) {
+		d.append(drawOrienter(m, false, 200, 250).myCss('float:left;margin:20px'))
+		if (m.zoom) {
+			var size = _.min([$(window).width(), $(window).height()])
+			_.dialog(drawOrienter(m, true, size - 50, size))
+		}
 	})
 
-	updateAnim()
+	d.append($('<div style="clear:both"/>'))
+	d.append($('<div class="bluepill" style="margin-left:20px"/>').text('all upright,').append($('<span style="margin-left:10px;font-size:x-small"/>').text(' or marked "not sure"')).click(function () {
+		rpc('submitResults', _.map(model, function (m) {
+			return {
+				task : m._id,
+				answer : m.sure ? m.angle : -1
+			}
+		}), function () {
+			if (isHIT())
+				mturkSubmit()
+			else
+				location.reload()
+		})
+	}))
 
-    return d
+	var e = $('body').find('.everything')
+	if (e.length == 0) $('body').append(e = $('<div class="everything"/>'))
+	e.empty().append(d)
+}
+
+function drawOrienter(m, zoom, xSize, ySize) {
+	var d = $('<div/>')
+	var img = $('<img style="max-width:' + xSize + 'px;max-height:' + xSize + 'px"/>').attr('src', zoom ? m.img.large : m.img.small).rotate(m.angle)
+	d.append(center(img).myCss('width:' + xSize + 'px;height:' + xSize + 'px'))
+
+	var spacer = 5
+	function createButton(first, content) {
+		return center(content).myCss('cursor:pointer;background:lightgrey;float:left;width:' + ((xSize - 3 * spacer) / 4) + 'px;height:' + (ySize - xSize - spacer) + 'px;margin-top:' + spacer + 'px;margin-left:' + (first ? 0 : spacer) + 'px')
+	}
+
+	var buttons = []
+
+	d.append(buttons[0] = createButton(1, $('<div style="font-size:x-large"/>').text('\u21BA').rotate(-90)).click(function () {
+		m.angle = myMod(m.angle - 90, 360)
+		updateEverything()
+	}))
+
+	d.append(createButton(0, $('<span>' + (zoom ? 'un ' : '') + 'zoom</span>')).click(function () {
+		m.zoom = !m.zoom
+		if (m.zoom) m.sure = true
+		updateEverything()
+	}))
+
+	d.append(createButton(0, $('<div style="font-weight:' + (m.sure ? 'normal' : 'bold') + '">not<br/>sure</div>')).click(function () {
+		m.sure = !m.sure
+		if (!m.sure) m.zoom = false
+		updateEverything()
+	}))
+
+	d.append(buttons[1] = createButton(0, $('<div style="font-size:x-large"/>').text('\u21BB').rotate(90)).click(function () {
+		m.angle = myMod(m.angle + 90, 360)
+		updateEverything()
+	}))
+
+	if (!m.sure) {
+		img.myCss('opacity:0.3')
+		_.each(buttons, function (b) {
+			b.myCss('color:grey')
+		})
+	}
+
+	return d
 }
 
 $(function () {
-    $('body').append(drawModel(model))
+	rpc('grabTasks', { n : 8 }, function (arg) {
+		model = arg
+		_.each(model, function (m) {
+			_.ensure(m, 'angle', 0)
+			_.ensure(m, 'sure', true)
+			_.ensure(m, 'zoom', false)
+		})
+		updateEverything()
+		mturkCheckPreview()
+	})
 })
 
 </script>
