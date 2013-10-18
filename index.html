@@ -1,0 +1,119 @@
+<html>
+<head>
+<title>orient</title>
+<link rel="stylesheet" type="text/css" href="/static/utils.css">
+<style>
+
+body {
+    margin: 10px;
+}
+table {
+    border-collapse: collapse;
+}
+th, td {
+    padding: 0px;
+}
+
+</style>
+</head>
+<body>
+
+<script src="//code.jquery.com/jquery-2.0.3.min.js"></script>
+<script src="/gl519/jquery.cookie.js"></script>
+
+<script src="/gl519/index.js"></script>
+<script src="/gl519/random.js"></script>
+
+<script src="/static/utils.js"></script>
+
+<script>
+
+var model = []
+
+function createTestModel() {
+	var m = []
+	for (var i = 0; i < 8; i++) {
+		m.push({
+			src : 'http://s3.amazonaws.com/fzaapnkuul/' + i + '-small.png',
+			angle : 0,
+			anim : {
+				img : null,
+				startAngle : 0,
+				startTime : 0,
+				endTime : 1,
+				currentAngle : 0
+			}
+		})
+	}
+	return m
+}
+model = createTestModel()
+
+function drawModel(m) {
+    var d = $('<div/>')
+
+    var updateAnimTimeout = null
+    function updateAnim() {
+    	var keepGoing = false
+    	var now = _.time()
+    	_.each(m, function (m) {
+    		var startAngle = m.anim.startAngle
+    		var endAngle = m.angle
+    		if (endAngle > startAngle && (endAngle - startAngle) > 180)
+    			endAngle -= 360
+    		else if (endAngle < startAngle && (startAngle - endAngle) > 180)
+    			endAngle += 360
+
+    		m.anim.currentAngle = myMod(Math.round(lerpCap(m.anim.startTime, startAngle, m.anim.endTime, endAngle, now)), 360)
+    		m.anim.img.rotate(m.anim.currentAngle)
+    		if (now < m.anim.endTime) keepGoing = true
+    	})
+    	clearTimeout(updateAnimTimeout)
+    	if (keepGoing)
+    		updateAnimTimeout = setTimeout(updateAnim, 30)
+    }
+
+	var size = 200
+	_.each(m, function (m) {
+		var dd = $('<div style="float:left;margin:10px"/>')
+		dd.append(center(m.anim.img = $('<img style="max-width:' + size + 'px;max-height:' + size + 'px"/>').attr('src', m.src)).myCss('width:' + size + 'px;height:' + size + 'px').click(function (e) {
+			var a = vectorSub(vectorSub(getMousePos(e), vector($(this).offset())), vector(size / 2, size / 2))
+			a.y *= -1
+			a = Math.atan2(a.y, a.x) / tau
+			a -= .25
+			a = myMod(Math.round(a * 4), 4) * 90
+
+			m.angle = myMod(m.angle + a, 360)
+			m.anim.startAngle = m.anim.currentAngle
+			m.anim.startTime = _.time()
+			m.anim.endTime = _.time() + 300
+
+			updateAnim()
+		}))
+		var buttons = $('<div style="position:relative;left:-1000px"/>')
+		buttons.append($('<button/>').text('zoom').click(function () {
+			alert('hello')
+		}))
+		dd.append(buttons)
+		dd.hover(function () {
+			dd.myCss('background:lightgrey')
+			buttons.myCss('left:0px')
+		}, function () {
+			dd.myCss('background:white')
+			buttons.myCss('left:-1000px')
+		})
+		d.append(dd)
+	})
+
+	updateAnim()
+
+    return d
+}
+
+$(function () {
+    $('body').append(drawModel(model))
+})
+
+</script>
+</body>
+</html>
