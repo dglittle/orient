@@ -112,8 +112,12 @@ $(function () {
 			_.ensure(m, 'sure', true)
 			_.ensure(m, 'zoom', false)
 		})
-		updateEverything()
-		mturkCheckPreview()
+		if (model.length > 0) {
+			updateEverything()
+			mturkCheckPreview()
+		} else {
+			$('body').append($('<div/>').text('sorry, nothing left to do right now...'))
+		}
 	})
 })
 

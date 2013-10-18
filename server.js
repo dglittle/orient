@@ -59,9 +59,9 @@ _.run(function () {
         _.run(function () {
             try {
                 if (req.params[0]) {
-                    if (g_rpc_version != req.params[0])
+                    if (g_rpc_version != req.params[1])
                         throw new Error('version mismatch')
-                    if (!req.cookies.rpc_token || req.cookies.rpc_token != req.params[1])
+                    if (!req.cookies.rpc_token || req.cookies.rpc_token != req.params[2])
                         throw new Error('token mismatch')
                     var runFunc = function (input) {
                         return rpc[input.func](input.arg, req, res)
