@@ -89,9 +89,14 @@ _.run(function () {
     })
 
     rpc.grabTasks = function (arg, req) {
+        var randomId = _.md5(_.randomString(10))
+        var a = _.p(db.collection('tasks').find({
+           _id : { $gt : randomId }
+        }).sort({ _id : 1 }).limit(arg.n, _.p()))
+        if (a.length > 0) return a
         return _.p(db.collection('tasks').find({
-           _id : { $gt : _.md5(_.randomString(10)) }
-        }).limit(arg.n, _.p()))
+           _id : { $lte : randomId }
+        }).sort({ _id : -1 }).limit(arg.n, _.p()))
     }
 
     rpc.submitResults = function (arg, req) {
